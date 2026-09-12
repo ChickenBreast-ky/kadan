@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+
+# local workspace state — never part of the public repo
+.staging/
+.trash/
+.omo/
+.rottie/
+
+# private daily logs / evidence live in a separate repository nested here
+docs/daily/

@@ -1,0 +1,21 @@
+const e=x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+const recipient=x=>x==='@user'?'사용자 · OS 알림':x||'모름';
+const time=x=>x?new Date(x).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false}):'모름';
+export function renderWatchOverview(center,board){
+ const m=center?.monitoring,b=board.monitoring||m?.boards?.find(x=>x.name===board.name);
+ if(!m||!b)return '<aside class="watch-overview"><strong>감시 정보 미수집</strong><p>감시가 없다는 뜻은 아닙니다. 같은 시점의 조회 근거가 필요합니다.</p></aside>';
+ if(b.state==='not-required')return '<aside class="watch-overview"><span>미완료 카드의 감시 대상 없음</span></aside>';
+ const processLabel={running:'감시기 실행 중',absent:'감시기 없음',duplicate:'감시기 중복 실행',unknown:'감시기 생존 모름'}[m.process.state];
+ const setupLabel={configured:`상신 관계 ${b.registeredRoles}/${b.totalRoles}개 확인`,incomplete:`직속 관계 미등록 ${b.missingRoles.length}개`,unassigned:'담당 미배정 · 경로 확인 전',absent:'감시 설정 확인 필요',duplicate:'중복 감시 확인 필요',unknown:'설정 반영 확인 필요'}[b.state];
+ return `<aside class="watch-overview ${b.state==='configured'?'watch-configured':'watch-attention'}"><div class="watch-summary"><strong>${e(processLabel)}</strong><span>${e(setupLabel)}</span></div><p>감시 주기 정상 여부: 확인 기록 없음 · 프로세스 생존과 별개입니다.</p>
+ <details><summary>감시 설정·상신 경로 보기</summary><dl><dt>확인 시각</dt><dd>${e(time(m.checkedAt))}</dd><dt>감시기</dt><dd>${m.process.instances.map(p=>`PID ${p.pid} · 시작 ${e(time(p.startedAt))}`).join('<br>')||e(m.process.error||'확인된 프로세스 없음')}</dd><dt>직속 관계 파일</dt><dd>${e(m.configuration.path||'현재 감시기와 연결된 기록 없음')}</dd><dt>파일 반영</dt><dd>${e(m.configuration.reason)}${m.configuration.loadedAt?' · '+e(time(m.configuration.loadedAt)):''}</dd></dl>
+ <h3>작업 감시와 감독 관찰</h3><p>현재 판 담당의 최근 24시간 기록입니다. 보고 완료에는 최종 답변 없이 정상 접수된 호출도 포함됩니다.</p>
+ <div class="scroll"><table><thead><tr><th>구분</th><th>호출 요청</th><th>보고 완료</th><th>시간 초과</th><th>기타 호출 오류</th></tr></thead><tbody>${(b.aiActivity??[]).map(a=>`<tr><td>${e(a.label)}</td>${['requests','reported','timeouts','failed'].map(k=>`<td>${a[k]??'모름'}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5">호출 기록 모름</td></tr>'}</tbody></table></div>
+ ${b.missingRoles.length?'<p>미등록 역할은 기존 이름·route 설정으로 처리될 수 있으므로 감시 없음으로 단정하지 않습니다.</p>':''}
+ <p>상위 감독 → 소속 역할 순서입니다. 같은 상위 안에서는 이름순, 관계 미확인은 마지막에 표시합니다.</p>
+ <div class="scroll"><table><thead><tr><th>감시 대상</th><th>직속 상위</th><th>현재 상신 대상</th></tr></thead><tbody>${b.roles.map(r=>`<tr data-hierarchy-depth="${r.hierarchyDepth??0}"><td><span class="watch-role" style="padding-left:${Math.min(r.hierarchyDepth??0,6)*18}px">${r.hierarchyDepth?'<span aria-hidden="true">↳ </span>':''}${e(r.role)}</span>${r.scope==='supervisor-health'?`<small title="연결 오류가 5분 지속되면 먼저 확인합니다. 마지막 AI 관찰: ${e(time(r.lastCheckedAt))}"> · 감독 관찰AI · 1시간</small>`:'<small> · 작업 감시AI</small>'}</td><td>${r.registered?e(recipient(r.parent)):r.registered===false?'미등록 · 기존 경로 확인':'설정 모름'}</td><td>${r.recipientKnown?e(recipient(r.recipient)):'모름'}</td></tr>`).join('')}</tbody></table></div>
+ <p>상위가 없으면 같은 책임 사슬의 다음 상위로 올라갑니다. ‘현재 상신 대상’은 조회 시점의 예상 경로이며 실제 전송·처리 완료가 아닙니다.</p>
+ <h3>최근 관련 감시 기록</h3>${b.recentAlerts===null?'<p>원장 읽기 모름</p>':b.recentAlerts.length?`<ul>${b.recentAlerts.map(a=>`<li>${e(time(a.at))} · ${e(a.role||'공통')} · ${e(a.kind)}${a.resolved?' · 해소 기록':''} → ${e(recipient(a.recipient))} · ${a.delivered===true?'전송 성공 기록':a.delivered===false?'전송 실패 기록':'전송 여부 모름'}</li>`).join('')}</ul>`:'<p>관련 경보 기록 없음 · 정상 동작 증명은 아닙니다.</p>'}
+ <p class="muted">같은 근거: <code>kadan tree</code>의 <code>monitoring</code> · <code>/api/cards</code>의 <code>center.monitoring</code></p></details></aside>`;
+}
+export const watchOverviewStyle=`.watch-overview{margin:16px 0;padding:12px 14px;border:1px solid #d9e2dc;border-left:3px solid #759486;border-radius:6px;background:#f7faf8;font-size:12px}.watch-overview p{margin:6px 0;color:#596b60}.watch-summary{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.watch-summary strong{font-size:13px}.watch-attention{border-left-color:#b68625;background:#fffaf0}.watch-overview details{margin-bottom:0}.watch-overview dl{margin:12px 0}.watch-overview dd{overflow-wrap:anywhere}.watch-overview li{overflow-wrap:anywhere}.watch-overview h3{font-size:13px}.watch-overview code{overflow-wrap:anywhere}`;

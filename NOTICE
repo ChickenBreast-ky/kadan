@@ -1,0 +1,9 @@
+kadan (카단)
+Copyright 2026 Kyle (ChickenBreast-ky)
+
+This product is developed at https://github.com/ChickenBreast-ky/kadan
+and distributed under the Apache License, Version 2.0.
+
+Design references (no code copied):
+- Orca (MIT) — GUI tab opening and worktree terminal ideas
+- Paseo, Herdr (Apache-2.0) — attach and session state detection references

@@ -1,0 +1,20 @@
+{
+  "_about": "작업자를 실제로 띄우는 CLI(실행기)별 실행법·필수 플래그·확인법. 이 파일은 예시다. 실제 값은 $KADAN_HOME/agent-runners.json에 두고 사람이 관리한다. 자동 라우터는 없다.",
+  "_공통": {
+    "터미널 주입": "긴 지시는 파일에 쓰고 터미널에는 경로 한 줄만 준다.",
+    "발령 후 확인": "발령 뒤 ps로 실제 명령줄에 의도한 --model 등 플래그가 붙었는지 본다."
+  },
+  "_기본모델": {
+    "codex": { "모델": "<model-slug>", "기본 강도": "medium", "예": "codex --model <model-slug> -c model_reasoning_effort=\"medium\"" },
+    "claude": { "모델": "<model-slug>", "예": "claude --model <model-slug>" }
+  },
+  "_역할별기본": {
+    "기본_프리셋": "A",
+    "프리셋": {
+      "A": { "슈퍼감독": "codex/<model>", "감독": "codex/<model>", "작업자": "codex/<model>", "검수자": "claude/<model>", "규칙": "작업자와 검수자는 다른 모델 계열로 둔다" }
+    }
+  },
+  "_폴백순서": ["codex/<model-a>", "codex/<model-b>", "claude/<model>"],
+  "codex": { "command": "codex --model <model-slug>", "required_flags": [], "quirks": [] },
+  "claude": { "command": "claude --model <model-slug>", "required_flags": [], "quirks": [] }
+}

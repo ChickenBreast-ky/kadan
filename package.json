@@ -1,0 +1,31 @@
+{
+  "name": "kadan",
+  "version": "0.1.0",
+  "description": "Kadan — run AI CLI agents as tmux roles: start, message, watch, intervene. Zero dependencies. (카단: 역할 띄우기·메시지·감시·개입)",
+  "type": "module",
+  "bin": {
+    "kadan": "src/cli.mjs"
+  },
+  "files": [
+    "src",
+    "scripts/watch-judge.sh",
+    "scripts/recover-sessions.mjs",
+    "skills",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check:public": "node scripts/check-public-strings.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChickenBreast-ky/kadan.git"
+  },
+  "license": "Apache-2.0"
+}

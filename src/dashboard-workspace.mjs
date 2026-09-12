@@ -1,0 +1,120 @@
+import {cardTurn} from './card-turn.mjs';
+import {renderCardInbox} from './dashboard-inbox.mjs';
+import {approvedDetailGuide} from './dashboard-detail-guides.mjs';
+import {escapeHtml as e,renderCardDocument} from './card-content.mjs';
+import {stateText,progressLabel,currentProgressReport} from './human-brief.mjs';
+import {renderDetailSummary,renderInstructionTable,renderDetailHistory,detailEvents,renderDetailSections} from './dashboard-detail.mjs';
+import {buildCardFlows,cardPurpose,renderCardFlow,renderRallyFlow} from './dashboard-flow.mjs';
+
+// 열 키 · 화면 이름 · 기본 너비 · 최소 너비. 저장된 배치는 키로 연결한다.
+export const workspaceColumns=[['title','카드 · 목적',320,180],['flowLabel','티키타카',205,110],['turnLabel','현재 차례',190,110],['model','실행 모델',150,90],['stateLabel','카드 상태',105,90],['next','다음 행동',200,100],['board','판',110,80],['reportAt','마지막 보고',110,100],['at','최근 변경',110,100]];
+export const timeLabel=value=>Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false}):'모름';
+const clip=(value,n=220)=>String(value??'').slice(0,n);
+// 진행 중인 카드만 현재 모델을 말한다. 종료 카드의 최신 시작 기록은 지금 돌고 있는 모델이 아닐 수 있어 빈 칸으로 둔다.
+const terminalState=new Set(['done','cancelled','superseded','archived']);
+const roleModel=(center,role,state)=>{
+ if(!role||terminalState.has(state))return {short:'',effort:'',title:''};
+ const m=center?.models?.[role];
+ if(!m?.model)return {short:'',effort:'',title:''};
+ return {short:String(m.model).split('/').at(-1),effort:m.effort||'',title:[m.harness,m.model,m.effort?'강도 '+m.effort:'',m.at?'시작 '+shortTimeLabel(m.at):''].filter(Boolean).join(' · ')};
+};
+export function workspaceModel(center,briefs) {
+ if(!center)return null;
+ const flows=buildCardFlows(center.cards);
+ return center.cards.map(c=>{
+  const brief=briefs?.get(c.key),report=currentProgressReport(c),turn=cardTurn(c),flow=flows.get(c.key),purpose=cardPurpose(c,brief);
+  const reportState=brief?.reportState||report.state;
+  const reportAt=brief?.reportState?brief.evidenceAt:report.at;
+  const running=roleModel(center,c.role,c.displayState);
+  return {key:c.key,id:c.id,repo:c.repo,title:brief?.title||c.title||c.id,originalTitle:c.title||c.id,state:c.displayState,stateLabel:stateText[c.displayState]||'모름',
+  stored:c.status,board:c.board||'',owner:c.role||'',at:c.at||null,reportAt,
+   model:running.short,effort:running.effort,modelTitle:running.title,
+   purpose:clip(purpose.text),flowLabel:flow.linked?flow.label:(c.workType==='coordination'?'관리·조율':''),flowPhase:flow.linked?(flow.older?`최신 ${flow.group.round}라운드 · ${flow.phase}`:flow.phase):'',flowTitle:flow.group?.title||'',
+   turnLabel:turn.label,turnOwner:turn.owner,turnReason:turn.reason,turnSource:turn.source,turnAt:turn.at,turnBy:turn.by,
+   reportState,reportLabel:reportState==='unknown'?'보고 확인 불가':reportState==='none'?'보고 없음':timeLabel(reportAt),
+   next:clip(c.nextAction||brief?.next||''),nextOwner:c.resolutionOwner||'',
+   summary:clip(brief?.summary||''),scope:clip(c.scope),workType:c.workType||'execution',revision:c.revision};
+ });
+}
+export function filterWorkspaceRows(rows,state) {
+ const words=String(state.q||'').trim().toLocaleLowerCase('ko').split(/\s+/).filter(Boolean);
+ const terminal=['done','cancelled','superseded','archived'];
+ return (rows||[]).filter(c=>(!state.collection||(state.collection==='work'?c.kind==='work':c.kind!=='work'&&(state.collection!=='unlinked'||!c.parentWorkKey)))&&(!state.repo||c.repo===state.repo)&&(!state.board||c.board===state.board)&&
+  (!state.state?!terminal.includes(c.state):state.state==='all'||c.state===state.state)&&
+  words.every(word=>[c.title,c.purpose,c.key,c.board,c.owner,c.model,c.turnLabel,c.turnReason,c.flowLabel,c.flowPhase,c.flowTitle,c.summary,c.scope,c.next,c.nextOwner].join(' ').toLocaleLowerCase('ko').includes(word)));
+}
+export function sortWorkspaceRows(rows,key='at',direction='desc') {
+ if(key==='attention')return [...rows].sort((a,b)=>{
+  const rank=c=>({unconfirmed:0,orphaned:1,failed:2})[c.state]??3;
+  const d=rank(a)-rank(b);if(d)return d;
+  const at=Date.parse(a.at)||0,bt=Date.parse(b.at)||0;if(at!==bt)return bt-at;
+  return a.key.localeCompare(b.key);
+ });
+ const field=workspaceColumns.some(([name])=>name===key)?key:'at';
+ return [...rows].sort((a,b)=>{
+  const av=a[field],bv=b[field];if(av==null||av===''||bv==null||bv==='')return (av==null||av==='')?(bv==null||bv===''?a.key.localeCompare(b.key):1):-1;
+  return (String(av).localeCompare(String(bv),'ko',{numeric:true})*(direction==='asc'?1:-1))||a.key.localeCompare(b.key);
+ });
+}
+const statePill=c=>`<span class="state ${e(c.state||c.displayState)}">${e(c.stateLabel||stateText[c.displayState]||'모름')}</span>`;
+export function shortTimeLabel(value) {
+ if(!Number.isFinite(Date.parse(value)))return '모름';
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value)).map(p=>[p.type,p.value]));
+ return `${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
+}
+export function workspaceRowsHtml(rows,layout,selected) {
+ if(layout==='table')return rows.map(c=>{
+  const short=c.kind==='work'?c.stateLabel:({waiting:'결과 대기',orphaned:'세션 확인 필요',assigned:'배정·시작 전',unconfirmed:'발령됨',failed:'실패 기록',running:'작업 중'})[c.state]||c.stateLabel;
+  return `<tr data-card-row="${e(c.key)}" class="${selected===c.key?'selected':''}"><td data-column="title"><a class="dw-card-title" data-card-key="${e(c.key)}" href="?card=${encodeURIComponent(c.key)}#detail" aria-current="${selected===c.key}" title="${e(c.originalTitle||c.title)}"><span>${e(c.title)}</span><small class="${c.purpose?'dw-card-purpose':''}" title="${e(c.purpose||c.id)}">${e(c.purpose||c.id)}</small></a></td><td data-column="flowLabel" class="dw-flow-cell" title="${e([c.flowTitle,c.flowLabel,c.flowPhase].filter(Boolean).join(' · '))}"><strong>${e(c.flowLabel)}</strong><small>${e(c.flowPhase)}</small></td><td data-column="turnLabel" class="dw-turn-cell" title="${e(c.turnReason)}"><strong>${e(c.turnLabel||'차례 확인 필요')}</strong><small>${e(c.turnSource||(c.turnLabel==='종료'?'카드 종료':'기록 확인 필요'))}</small></td><td data-column="model" class="dw-model-cell" title="${e(c.modelTitle)}"><strong>${e(c.model||'')}</strong>${c.effort?`<small>강도 ${e(c.effort)}</small>`:''}</td><td data-column="stateLabel" title="${e(c.stateLabel)}">${statePill({...c,stateLabel:short})}</td><td data-column="next" title="${e(c.next)}">${e(c.next||'기록 없음')}</td><td data-column="board" title="${e(c.board)}">${e(c.board||'판 미지정')}</td><td data-column="reportAt" title="${e(c.reportLabel)}">${e(c.reportAt?shortTimeLabel(c.reportAt):c.reportLabel)}</td><td data-column="at" title="${e(timeLabel(c.at))}">${e(shortTimeLabel(c.at))}</td></tr>`;
+ }).join('');
+ return rows.map(c=>`<li><a class="dw-card-row" data-card-key="${e(c.key)}" href="?card=${encodeURIComponent(c.key)}#detail" aria-current="${selected===c.key}"><span class="dw-row-meta">${statePill(c)} <small>${e(c.id)} · ${c.kind==='work'?'업무 카드':c.workType==='coordination'?'관리·조율':'실행 작업'}</small></span><strong>${e(c.title)}</strong><span>${e(c.purpose||c.summary||c.next||'상세에서 작업 지시를 확인하세요.')}</span>${[c.flowLabel,c.flowPhase].filter(Boolean).join(' · ')?`<small class="dw-flow-line">${e([c.flowLabel,c.flowPhase].filter(Boolean).join(' · '))}</small>`:''}<small class="dw-turn-line" title="${e(c.turnReason)}">현재 차례 <b>${e(c.turnLabel||'차례 확인 필요')}</b>${c.turnSource?' · '+e(c.turnSource):''}</small>${c.model?`<small class="dw-model-line" title="${e(c.modelTitle)}">모델 ${e(c.model)}${c.effort?' · 강도 '+e(c.effort):''}</small>`:''}<small>${e(c.board||'판 미지정')}</small><small>보고 ${e(c.reportLabel)} · 변경 ${e(timeLabel(c.at))}</small></a></li>`).join('');
+}
+const json=value=>JSON.stringify(value).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+export function renderDashboardWorkspace({center,briefs,centerError,url,detail,works=null,workError=null,workDetail}) {
+ const params=url.searchParams,baseRows=workspaceModel(center,briefs);
+ const parent=new Map((works||[]).flatMap(w=>w.executions.map(x=>[x.key,w.workKey])));
+ const fields=['key','id','repo','title','kind','workType','originalTitle','state','stateLabel','stored','purpose','flowLabel','flowPhase','flowTitle','turnLabel','turnReason','turnSource','next','summary','scope','board','owner','model','modelTitle','reportAt','reportLabel','at','revision'];
+ const rows=baseRows===null?null:works===null?baseRows:[...works.map(w=>{const row=Object.fromEntries(fields.map(k=>[k,['purpose','summary','scope','next'].includes(k)?String(w[k]||'').slice(0,220):w[k]]));const running=roleModel(center,w.owner,w.state);row.model=running.short;row.effort=running.effort;row.modelTitle=running.title;return row;}),...baseRows.map(c=>({...c,kind:'execution',parentWorkKey:parent.get(c.key)||''}))];
+ const collection=works===null?'':(['work','executions','unlinked'].includes(params.get('collection'))?params.get('collection'):params.get('card')&&!params.get('card').startsWith('work:')?'executions':'work');
+ const state={collection,q:params.get('q')||'',repo:params.get('repo')||'',board:params.get('board')||'',state:params.get('state')||'',layout:params.get('layout')==='split'?'split':'table',sort:params.get('sort')||'attention',dir:params.get('dir')==='asc'?'asc':'desc'};
+ const filtered=sortWorkspaceRows(filterWorkspaceRows(rows,state),state.sort,state.dir);
+ const totalInCollection=(rows||[]).filter(c=>collection==='work'?c.kind==='work':c.kind!=='work'&&(collection!=='unlinked'||!c.parentWorkKey)).length;
+ const filterName=state.state===''?'미완료':state.state==='all'?'전체':(stateText[state.state]||state.state);
+ const countLabel=rows===null||(collection==='work'&&workError)?'모름':filtered.length===totalInCollection?('전체 '+totalInCollection+'장'):((state.q||state.repo||state.board)?'조건':filterName)+' '+filtered.length+'장 · 전체 '+totalInCollection+'장';
+ const explicit=params.get('card'),selected=explicit||filtered[0]?.key||'',card=center?.cards.find(c=>c.key===selected),work=works?.find(w=>w.key===selected);
+ const opened=Boolean(explicit)&&params.get('detail')!=='0';
+ const options=(values,current)=>values.map(([value,label])=>`<option value="${e(value)}"${value===current?' selected':''}>${e(label)}</option>`).join('');
+ return `<section class="dw-workspace" id="dashboard-workspace" data-view="dashboard">
+ ${works!==null?`<div class="bw-collections" role="group" aria-label="업무와 실행 전환">${[['work','업무 카드'],['executions','모든 실행'],['unlinked','연결 전 실행']].map(([k,label])=>`<button type="button" data-collection="${k}" aria-pressed="${collection===k}">${label} <span>${k==='work'?(workError?'모름':works.length):k==='executions'?(baseRows?.length??'모름'):(baseRows?.filter(c=>!parent.has(c.key)).length??'모름')}</span></button>`).join('')}<small>업무 하나 안에 실행·검수·인박스가 이어집니다.</small></div>${workError?`<p role="alert" class="error">업무 상태 모름: ${e(workError)}</p>`:''}<p id="dw-work-help" class="bw-empty-help"${collection==='work'?'':' hidden'}>업무는 약속한 결과를 확인한 뒤 완료합니다. 기존 카드는 ‘연결 전 실행’에서 찾을 수 있습니다.</p>`:''}
+ <div class="dw-controls"><label>판<select id="dw-board" aria-label="작업판">${options([['','모든 판'],...[...new Set((rows||[]).map(c=>c.board).filter(Boolean))].sort().map(b=>[b,b])],state.board)}</select></label><label>저장소<select id="dw-repo">${options([['','전체'],...[...new Set((rows||[]).map(c=>c.repo))].sort().map(r=>[r,r])],state.repo)}</select></label><label class="dw-search">검색<input id="dw-search" value="${e(state.q)}" placeholder="제목 · 카드 ID · 현재 차례 · 담당"></label><label>상태<select id="dw-state">${options([['','미완료'],['all','전체'],...Object.entries(stateText)],state.state)}</select></label><div class="dw-layout" role="group" aria-label="보기 전환"><button type="button" data-layout="table" aria-pressed="${state.layout==='table'}">표 보기</button><button type="button" data-layout="split" aria-pressed="${state.layout==='split'}">목록·상세</button></div></div>
+ <div class="dw-heading"><h1 id="dw-collection-title">${collection==='work'?'업무 카드':collection==='unlinked'?'연결 전 실행':collection==='executions'?'실행':'카드'}</h1><span id="dw-count" role="status">${e(countLabel)}</span><span>카드의 목적 · 흐름 · 현재 차례</span><div class="dw-heading-actions"><div id="dw-column-tools" class="dw-column-tools"${state.layout!=='table'?' hidden':''}><span class="dw-column-hint">제목 드래그: 순서 · 경계 드래그: 너비</span><button type="button" class="ds-button--quiet" data-columns-reset title="열 순서와 너비를 기본값으로 되돌리기">열 초기화</button></div>${works!==null?'<a href="#work-create">새 업무 만들기</a>':'<a href="#create">새 카드 만들기</a>'}</div><span class="dw-sr" id="dw-column-help">열 제목을 클릭하면 정렬합니다. 제목을 좌우로 드래그하거나 Alt와 방향키를 함께 누르면 열 순서가 바뀝니다. 첫 열은 가로 스크롤해도 고정됩니다. 열 경계를 드래그하거나 경계에서 방향키를 누르면 너비가 바뀝니다. 경계를 두 번 클릭하면 그 열의 기본 너비로 돌아갑니다.</span><span class="dw-sr" id="dw-column-status" role="status"></span></div>
+ <div class="dw-panes ${state.layout==='table'?'dw-table-layout':''} ${opened?'dw-detail-open':''}" id="dw-panes"><section class="dw-master" id="dw-master" aria-label="작업 목록"><div class="dw-scroll" id="dw-scroll" tabindex="0" aria-label="카드 목록 · 표는 좌우로 스크롤 가능"><ul id="dw-list"${state.layout==='table'?' hidden':''}>${state.layout==='split'?workspaceRowsHtml(filtered,'split',selected):''}</ul><table class="dw-table" id="dw-table"${state.layout!=='table'?' hidden':''}><caption class="dw-sr">열 제목을 클릭하면 정렬, 드래그하면 순서 변경. 열 경계로 너비 조절. 카드 제목으로 상세를 엽니다.</caption><colgroup>${workspaceColumns.map(([key,,width])=>`<col data-column="${key}" style="width:var(--column-${key},${width}px)">`).join('')}</colgroup><thead><tr>${workspaceColumns.map(([key,label])=>`<th scope="col" data-column="${key}" data-sort-column="${key}" aria-sort="${state.sort===key?(state.dir==='asc'?'ascending':'descending'):'none'}"><button type="button" data-sort="${key}" aria-describedby="dw-column-help" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+Home Alt+End" title="클릭: 정렬 · 드래그: 열 순서 이동 · Alt+방향키: 순서 이동">${`<span data-column-label>${collection==='work'?({stateLabel:'업무 상태',reportAt:'업무 기록'})[key]||label:label}</span>`}<span data-sort-arrow aria-hidden="true">${state.sort===key?(state.dir==='asc'?' ↑':' ↓'):' ↕'}</span></button><span class="dw-column-resize" data-workspace-resize="${key}" role="separator" aria-orientation="vertical" aria-label="${label} 열 너비" aria-controls="dw-table" aria-describedby="dw-column-help" tabindex="0" title="드래그로 ${label} 너비 조절 · 두 번 클릭하면 기본 너비"></span></th>`).join('')}</tr></thead><tbody id="dw-table-body">${state.layout==='table'?workspaceRowsHtml(filtered,'table',selected):''}</tbody></table><div id="dw-empty"${rows!==null&&filtered.length?' hidden':''}>${rows===null?`<h2>카드 상태 모름</h2><p>${e(centerError||'카드 기록을 읽지 못했습니다.')}</p>`:`<h2 id="dw-empty-title">${collection==='work'&&workError?'업무 상태 모름':works!==null&&collection==='work'&&!works.length?'아직 업무 카드가 없습니다.':'조건에 맞는 카드가 없습니다.'}</h2>${works!==null?'<p><a href="#work-create">새 업무 만들기</a> · <button type="button" data-collection="unlinked">기존 실행 확인</button></p>':''}<button type="button" data-workspace-reset>검색·필터 초기화</button>`}</div></div></section>
+ <div class="dw-pane-resize" data-workspace-resize="panes" role="separator" aria-orientation="vertical" aria-label="목록과 상세 너비" aria-controls="dw-master dw-detail" tabindex="0" title="드래그로 목록과 상세 너비 조절 · 두 번 클릭하면 기본 너비"></div>
+ <section id="dw-detail" class="dw-detail" aria-label="선택한 카드 상세"><div class="dw-detail-tools"><button type="button" data-detail-close>목록으로</button><span id="dw-detail-status" role="status"></span><button type="button" data-detail-expand>상세 확대</button></div><div id="dw-detail-content">${work?workDetail(work):card?detail(card):`<h2>카드 ${explicit?'확인 필요':'선택'}</h2><p>${explicit?'요청한 카드를 읽을 수 없습니다.':'카드를 선택하면 여기에서 내용을 읽을 수 있습니다.'}</p>`}</div></section></div>
+ <script type="application/json" id="dw-data">${json({rows,selected,opened,loadedKey:work?.key||card?.key||'',state,workError,columns:workspaceColumns})}</script></section>`;
+}
+export function renderWorkspaceDetail(c,{brief,center,decisions=[],decisionError=false,form='',collectedAt,entries=[],home,url}={}) {
+ const report=currentProgressReport(c);
+ const model=workspaceModel({cards:[c]},new Map([[c.key,brief]]))[0];
+ const runs=c.runs||[],events=detailEvents(c),guide=approvedDetailGuide(c),turn=cardTurn(c);
+ const flow=buildCardFlows([...(center?.cards||[]).filter(x=>x.key!==c.key),c]).get(c.key),purpose=cardPurpose(c,brief);
+ const life=center?.roles?.find(r=>r.role===c.role)?.life;
+ const sessions=!c.role?'담당 미배정':center?.runtimeKnown!==true?'모름':life?.state==='alive'?(life.pidState==='match'?'열림':'PID 변경 · 확인 필요'):'세션 없음';
+ const links=decisions.filter(d=>d.card===c.key);
+ const sameGroup=c.rallyId?(center?.cards||[]).filter(x=>x.repo===c.repo&&x.board===c.board&&x.rallyId===c.rallyId):[];
+ const reviews=sameGroup.filter(x=>x.rallyStep==='review'&&String(x.rallyRound)===String(c.rallyRound));
+ const cardLinks=items=>items.map(x=>`<li><a data-card-key="${e(x.key)}" href="?card=${encodeURIComponent(x.key)}#detail">${e(x.title||x.id)}</a> · ${e(stateText[x.displayState]||'모름')} · ${e(x.role||'미배정')}</li>`).join('');
+ const runHtml=runs.length?`<table><thead><tr><th>담당</th><th>실행 기록</th><th>시각</th></tr></thead><tbody>${runs.map(r=>`<tr><td>${e(r.role)}</td><td>${e(({done:'완료 기록',failed:'실패 기록',unconfirmed:'완료 미확인',orphaned:'세션 없음·미완료'})[r.state]||r.state||'모름')}</td><td>${e(timeLabel(r.at))}</td></tr>`).join('')}</tbody></table>`:'<p>연결된 실행 기록이 없습니다.</p>';
+ const panels={
+  summary:renderDetailSummary(c,{brief,report,reviews,reviewLinks:cardLinks(reviews),decisions:links,decisionError,events,compact:true,showRecent:false}),
+  technical:`<dl><dt>카드 상태</dt><dd>${e(stateText[c.status]||c.status||'모름')}</dd><dt>실행 상태</dt><dd>${e(progressLabel(c))}</dd><dt>세션 상태</dt><dd>${e(sessions)}</dd><dt>마지막 보고</dt><dd>${e(model.reportLabel)}</dd><dt>상세 수집</dt><dd>${e(timeLabel(collectedAt))}</dd><dt>카드 ID</dt><dd>${e(c.id)}</dd><dt>원본 제목</dt><dd>${e(c.title||c.id)}</dd></dl>${brief?.stale?'<p>이전 설명의 진행 서술은 사용하지 않습니다.</p>':''}${brief?.error?`<p>${e(brief.error)}</p>`:''}`, 
+  work:renderInstructionTable(c),
+  evidence:`<h3>역할별 실행 결과</h3>${runHtml}<h3>작업자가 남긴 보고</h3>${report.state==='reported'?`<p class="muted">${e(report.by||'모름')} · ${e(timeLabel(report.at))}</p><div class="dw-prose">${renderCardDocument(report.note||'',c)}</div>`:`<p>${report.state==='unknown'?'보고 확인 불가':'보고 없음'} · ${report.state==='unknown'?'현재 담당과 보고 시각의 근거를 확인하세요.':'현재 배정·발령 이후의 유효한 보고가 없습니다.'}</p>`}<h3>명시적으로 연결된 검수 카드</h3>${reviews.length?`<ul>${cardLinks(reviews)}</ul>`:'<p>현재 라운드에 연결된 검수 카드가 없습니다.</p>'}<p class="muted">실행 완료 기록은 검수 통과나 배포 완료를 뜻하지 않습니다. 결과 문서와 검수 범위는 각 카드의 작업 내용과 기록에서 확인하세요.</p>`,
+  group:renderRallyFlow(c,flow),
+  history:renderDetailHistory(events)
+ };
+ return `<article class="card-detail dw-reader" id="detail" data-detail-view="table" data-key="${e(c.key)}" data-revision="${e(c.revision)}"><header><div class="dd-reader-top"><p class="dd-eyebrow">${e(c.board||c.repo)} <span>${c.workType==='coordination'?'관리·조율':'실행 작업'}</span> ${statePill(model)}</p><div class="dd-layout" role="group" aria-label="상세 보기 방식"><button type="button" data-detail-view="table" aria-pressed="true">표형</button><button type="button" data-detail-view="document" aria-pressed="false">문서형</button></div></div><h2 tabindex="-1" id="dw-card-heading">${e(guide?.summary?.title||brief?.title||c.title||c.id)}</h2>${renderCardFlow(c,flow,{purpose,turn,brief,running:roleModel(center,c.role,c.displayState)})}</header>${renderDetailSections(renderCardInbox(c,{entries,cards:center?.cards||[c],home,url})+panels.summary,[
+ ['work','작업 지시',panels.work],['evidence','결과·검수',panels.evidence],['manage','기록 남기기',form],
+ ['technical','기술 정보',panels.technical+renderDetailSections('',[['group','티키타카 연결 기록',panels.group],['history','전체 변경 기록',panels.history]])+`<details class="dw-management"><summary>저장 위치·원본</summary><dl><dt>작업 폴더</dt><dd>${e(c.repoPath)}</dd><dt>카드 원본</dt><dd>${e(c.path)}</dd><dt>이전 경로 · 상대 문서 기준</dt><dd>${e(c.sourcePath||c.path||'모름')}</dd></dl><details><summary>작업 지시문 원문</summary><pre>${e(c.body)}</pre></details></details>`]
+ ])}</article>`;
+}
