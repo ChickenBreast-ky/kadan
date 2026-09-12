@@ -418,7 +418,7 @@ test("메모리 관문 25%/15% — 2026-08-09 사망과 2026-08-11 오탐을 함
         return { status: 0, stdout: "{ 0.00 0.00 0.00 }" };
       }
       return { status: 0, stdout: "12" };
-    }).current.memory;
+    }, { platform: "darwin" }).current.memory;
 
   assert.deepEqual(
     [26, 25, 16, 15, 14].map(memoryLevel),

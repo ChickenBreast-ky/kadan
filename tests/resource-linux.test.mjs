@@ -78,7 +78,7 @@ test("darwin은 기존 명령을 그대로 쓴다(card-50)", () => {
       return { status: 0, stdout: "total = 1024.00M used = 256.00M free = 768.00M" };
     }
     return { status: 0, stdout: "" };
-  });
+  }, { platform: "darwin" });
 
   assert.equal(result.current.memory, "normal");
   assert.equal(result.current.freePercent, 30);

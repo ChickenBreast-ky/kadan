@@ -18,6 +18,9 @@ jobs:
       - name: install tmux (ubuntu)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y tmux
+      - name: install tmux (macos)
+        if: runner.os == 'macOS'
+        run: brew install tmux
       - run: node --test tests/*.test.mjs
         env:
           KADAN_HOME: ${{ runner.temp }}/kadan-home
