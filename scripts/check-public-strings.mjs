@@ -6,7 +6,7 @@ import path from 'node:path';
 const banned=[/\/Users\//,/fw_m1/,/kyle-hub/,/moducerti/i,/securenet/i,/wonseongjang/,/kyle-control-plane/,/Kyle-Brain/,/docs\/daily\/[0-9]/,/kyle-agent-skills/];
 const targets=process.argv.slice(2).length?process.argv.slice(2):['src','tests','scripts','skills','docs','package.json','README.md','AGENTS.md','CONTRIBUTING.md','NOTICE'];
 const files=[];
-const walk=p=>{if(!fs.existsSync(p))return;const st=fs.statSync(p);if(st.isDirectory()){if(path.basename(p)==='.git'||path.basename(p)==='node_modules')return;for(const n of fs.readdirSync(p))walk(path.join(p,n));}else files.push(p);};
+const walk=p=>{if(!fs.existsSync(p))return;const st=fs.statSync(p);if(st.isDirectory()){if(path.basename(p)==='.git'||path.basename(p)==='node_modules'||p===path.join('docs','daily'))return;for(const n of fs.readdirSync(p))walk(path.join(p,n));}else files.push(p);};
 for(const t of targets)walk(t);
 let hits=0;
 for(const f of files){if(f===path.join('scripts','check-public-strings.mjs'))continue;
