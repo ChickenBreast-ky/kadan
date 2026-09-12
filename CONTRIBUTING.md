@@ -24,4 +24,4 @@ Thanks for helping. A few rules keep this project small and safe.
 - `tests/` — `node --test`. Tests that need tmux skip when it is absent.
 - `scripts/watch-judge.sh` — example judge command for `kadan watch`; requires `KADAN_JUDGE_MODEL`.
 - `skills/` — agent skills that drive Kadan (conductor, supervisor, secretary).
-- `docs/` — current rules. Daily logs and evidence are not part of this repository.
+- `docs/` — current rules; `docs/design.md` explains the locked rules and ledger format. Daily logs and evidence are not part of this repository.

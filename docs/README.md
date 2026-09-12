@@ -22,6 +22,7 @@
 | 담당 인계 | [인계 안내](handover.md) | — |
 | 사용자 결정 | [결정 기록](decisions.md) | — |
 | 저장과 복구 | [SQLite 저장](sqlite-storage.md) | — |
+| 설계 원칙·잠긴 규칙·원장 형식 | [설계 문서](design.md) | — |
 | 낱말 뜻 | [용어사전](glossary.md) | — |
 
 ## 이전 카단의 HTML
