@@ -28,7 +28,7 @@ kadan --help
 
 ```bash
 export KADAN_FLOOR=tmux       # fixed per machine: tmux | rottie
-export KADAN_WINDOW=none      # none | orca-kyle | rottie  — whether to open a GUI tab on start
+export KADAN_WINDOW=none      # none | orca | rottie  — whether to open a GUI tab on start
 
 kadan start worker-a --cmd 'codex'        # creates tmux session kadan-worker-a and records it in the ledger
 kadan send worker-a --task card-1 \

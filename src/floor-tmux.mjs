@@ -287,15 +287,15 @@ export function openWindow(session, platform = process.platform, deps = {}) {
     spawnFn,
   });
   if (!result.ok) {
-    console.error(`창 orca-kyle 실패: ${result.code}`);
+    console.error(`창 orca 실패: ${result.code}`);
     return null;
   }
   if (!waitForClient(session)) {
-    console.error("창 orca-kyle: 탭은 만들어졌으나 tmux 클라이언트 미접속");
+    console.error("창 orca: 탭은 만들어졌으나 tmux 클라이언트 미접속");
     return null;
   }
   return {
-    method: "orca-kyle",
+    method: "orca",
     orcaTerminalHandle: result.handle,
     reused: result.reused,
   };

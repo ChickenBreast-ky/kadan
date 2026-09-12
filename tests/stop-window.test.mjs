@@ -34,7 +34,7 @@ test("baseline: stop entry retains its existing shape and pending cards", () => 
     assert.deepEqual({ ...entry(), ...fields }, { ...base, rottieTerminalId: "owned-tab", rottieWindowClosed: false, rottieWindowError: "ROTTIE_INTERNAL" });
   });
   test("missing last-start tab leaves entry unchanged and never closes", () => {
-    for (const start of [undefined, {}, { window: "orca-kyle" }]) {
+    for (const start of [undefined, {}, { window: "orca" }]) {
       assert.deepEqual({ ...entry(), ...cli.closeStartedWindow(start, { env: {}, closeFn() { assert.fail("unexpected close"); }, print() { assert.fail("unexpected report"); } }) }, base);
     }
   });

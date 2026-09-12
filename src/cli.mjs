@@ -959,7 +959,7 @@ export function runWaitLoop({
 export function resolveWindowChoice(env = process.env) {
   const value = env.KADAN_WINDOW;
   if (!value) return { kind: "none" };
-  if (value === "orca-kyle" || value === "rottie" || value === "none") {
+  if (value === "orca" || value === "rottie" || value === "none") {
     return { kind: value };
   }
   return { error: "KADAN_WINDOW_INVALID", value };
@@ -969,12 +969,12 @@ function requireWindowChoice(env = process.env) {
   const choice = resolveWindowChoice(env);
   if (choice.error) {
     die(
-      `${choice.error}: KADAN_WINDOW=${choice.value} (orca-kyle|rottie|none만 허용)`,
+      `${choice.error}: KADAN_WINDOW=${choice.value} (orca|rottie|none만 허용)`,
       2
     );
   }
-  if (choice.kind === "orca-kyle" && !env.KADAN_ORCA_BIN) {
-    die("KADAN_ORCA_BIN_REQUIRED: KADAN_WINDOW=orca-kyle에는 절대경로가 필요하다", 2);
+  if (choice.kind === "orca" && !env.KADAN_ORCA_BIN) {
+    die("KADAN_ORCA_BIN_REQUIRED: KADAN_WINDOW=orca에는 절대경로가 필요하다", 2);
   }
   if (choice.kind === "rottie" && !env.KADAN_ROTTIE_BIN) {
     die("KADAN_ROTTIE_BIN_REQUIRED: KADAN_WINDOW=rottie에는 절대경로가 필요하다", 2);

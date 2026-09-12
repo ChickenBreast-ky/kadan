@@ -1552,7 +1552,7 @@ test("역할 표는 한 줄에 상태·창·마지막 활동·안 끝난 카드�
           {
             role: "c47-작업자",
             session: "kadan-c47-작업자",
-            window: "orca-kyle",
+            window: "orca",
             lastActivityAt: "2026-09-05T02:10:00.000Z",
             life: { state: "alive", pidState: "match" },
             cards: [
@@ -1573,7 +1573,7 @@ test("역할 표는 한 줄에 상태·창·마지막 활동·안 끝난 카드�
 
   assert.match(html, /<table class="role-table">/);
   assert.match(html, /<th>역할<\/th>\s*<th>상태<\/th>\s*<th>창<\/th>\s*<th>마지막 활동<\/th>\s*<th>안 끝난 카드<\/th>\s*<th>실행기 · 모델 · 계열<\/th>/);
-  assert.match(html, /<tr>\s*<td class="role-name">c47-작업자<\/td>\s*<td><span class="dot alive"[^>]*><\/span><span class="state alive">살아있음<\/span><\/td>\s*<td>orca-kyle<\/td>\s*<td><time title="[^"]+">09-05 11:10<\/time><\/td>/);
+  assert.match(html, /<tr>\s*<td class="role-name">c47-작업자<\/td>\s*<td><span class="dot alive"[^>]*><\/span><span class="state alive">살아있음<\/span><\/td>\s*<td>orca<\/td>\s*<td><time title="[^"]+">09-05 11:10<\/time><\/td>/);
   assert.match(html, /<summary>1장 · card-47-a<\/summary>/);
   assert.match(html, /card-47-b/);
   assert.match(html, /kadan-c47\.wait\.txt/);
@@ -1978,7 +1978,7 @@ test("읽기 명령은 홈 폴더와 tmux.conf를 만들지 않는다(2026-08-30
 
 test("창은 기계당 하나, 폴백 체인은 표면을 늘린다(2026-08-30 card-15 Ghostty 사고): KADAN_WINDOW 선택", () => {
   assert.deepEqual(resolveWindowChoice({}), { kind: "none" });
-  assert.deepEqual(resolveWindowChoice({ KADAN_WINDOW: "orca-kyle" }), { kind: "orca-kyle" });
+  assert.deepEqual(resolveWindowChoice({ KADAN_WINDOW: "orca" }), { kind: "orca" });
   assert.deepEqual(resolveWindowChoice({ KADAN_WINDOW: "rottie" }), { kind: "rottie" });
   assert.deepEqual(resolveWindowChoice({ KADAN_WINDOW: "ghostty" }), {
     error: "KADAN_WINDOW_INVALID",
@@ -1986,7 +1986,7 @@ test("창은 기계당 하나, 폴백 체인은 표면을 늘린다(2026-08-30 c
   });
 });
 
-test("Orca Kyle terminal create argv는 요소 배열·tmux 절대경로·한글 역할을 보존한다", () => {
+test("Orca terminal create argv는 요소 배열·tmux 절대경로·한글 역할을 보존한다", () => {
   const argv = buildOrcaCreateArgv({
     role: "c17-작업자 한글",
     session: "kadan-c17-작업자-한글",
@@ -2005,7 +2005,7 @@ test("Orca Kyle terminal create argv는 요소 배열·tmux 절대경로·한글
   assert.ok(argv.every((a) => typeof a === "string"));
 });
 
-test("창 하나만 실행한다 — none은 spawn 0회, Orca Kyle 미접속은 다음 후보 없이 실패(card-17)", () => {
+test("창 하나만 실행한다 — none은 spawn 0회, Orca 미접속은 다음 후보 없이 실패(card-17)", () => {
   let spawns = 0;
   const none = openWindow("kadan-테스트", "darwin", {
     choice: { kind: "none" },
@@ -2032,9 +2032,9 @@ test("창 하나만 실행한다 — none은 spawn 0회, Orca Kyle 미접속은 
     };
   };
   const failed = openWindow("kadan-테스트", "darwin", {
-    choice: { kind: "orca-kyle" },
+    choice: { kind: "orca" },
     role: "c17-작업자",
-    orcaBin: "/Applications/Orca Kyle.app/orca-kyle",
+    orcaBin: "/Applications/Orca.app/orca",
     spawnFn: orcaSpawn,
     waitForClient: () => false,
     cwd: "/tmp/kadan-lite",
@@ -2042,13 +2042,13 @@ test("창 하나만 실행한다 — none은 spawn 0회, Orca Kyle 미접속은 
   });
   assert.equal(failed, null);
   assert.equal(calls.length, 3);
-  assert.ok(calls.every((c) => c.bin === "/Applications/Orca Kyle.app/orca-kyle"));
+  assert.ok(calls.every((c) => c.bin === "/Applications/Orca.app/orca"));
 
   const reusedCalls = [];
   const reused = openWindow("kadan-테스트", "darwin", {
-    choice: { kind: "orca-kyle" },
+    choice: { kind: "orca" },
     role: "c17-작업자",
-    orcaBin: "/Applications/Orca Kyle.app/orca-kyle",
+    orcaBin: "/Applications/Orca.app/orca",
     spawnFn: (bin, argv) => {
       reusedCalls.push({ bin, argv });
       return {
@@ -2083,7 +2083,7 @@ test("창 하나만 실행한다 — none은 spawn 0회, Orca Kyle 미접속은 
     waitForClient: () => true,
   });
   assert.deepEqual(reused, {
-    method: "orca-kyle",
+    method: "orca",
     orcaTerminalHandle: "term_existing",
     reused: true,
   });
