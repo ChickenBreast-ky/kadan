@@ -21,7 +21,7 @@
     "check:public": "node scripts/check-public-strings.mjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "repository": {
     "type": "git",

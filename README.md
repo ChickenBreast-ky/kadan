@@ -11,7 +11,7 @@ Interface language is currently Korean (role names, CLI output, dashboards). Con
 
 ## Requirements
 
-- Node.js 22 or newer
+- Node.js 24 or newer (the default SQLite storage uses the built-in node:sqlite)
 - tmux 3.x (default floor). A Rottie floor also exists; see `docs/`.
 - macOS or Linux. No terminal window is opened on Linux; `kadan attach` prints the command instead.
 
