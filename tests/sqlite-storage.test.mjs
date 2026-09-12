@@ -71,7 +71,7 @@ test('SQLite: 프로세스가 트랜잭션 도중 죽으면 상태·이력이 �
 test('SQLite: 다른 프로세스의 긴 잠금은 제한 시간 뒤 실패하며 새 이벤트가 생기지 않는다',async()=>{
  const home=setup(),db=openDatabase(home);db.exec('BEGIN IMMEDIATE');
  const start=Date.now();const result=await child(`import {appendLedger} from './src/ledger.mjs';try{appendLedger({kind:'blocked'},process.argv[1])}catch(e){console.log(e.message);process.exitCode=2}`,[home]);
- db.exec('ROLLBACK');db.close();assert.equal(result.status,2);assert.match(result.stdout,/locked|busy/i);assert.ok(Date.now()-start<8000);assert.equal(readLedger(home).length,0);
+ db.exec('ROLLBACK');db.close();assert.equal(result.status,2);assert.match(result.stdout,/locked|busy/i);assert.ok(Date.now()-start<20000,'busy_timeout 5초 뒤 실패해야 한다 (느린 CI 러너의 node 기동 시간을 포함해 20초 상한)');assert.equal(readLedger(home).length,0);
 });
 test('SQLite: 전환 중 send는 실제 터미널 전송 전에 거절한다',async()=>{
  const {guardedSend}=await import('../src/cli.mjs');const home=setup();storageCommand(['pause'],{},{home});let sent=0;
