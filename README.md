@@ -24,7 +24,19 @@ npm link          # puts the `kadan` command on your PATH (no dependencies are i
 kadan --help
 ```
 
-## First run
+## Quick start (recommended)
+
+Two commands give you a secretary agent to talk to and a dashboard to watch. The secretary knows the Kadan skills and will set up supervisors and workers for you as you ask.
+
+```bash
+kadan init        # once: checks node/tmux, links skills/ into ~/.codex/skills and ~/.claude/skills, picks codex or claude
+kadan up          # every day: starts the 비서 (secretary) session + a hidden dashboard session
+kadan attach 비서 # open the secretary terminal and start talking (Korean UI)
+```
+
+`kadan up` prints the dashboard URL (default http://127.0.0.1:8790). Both are ordinary Kadan sessions: `kadan status` shows them, `kadan stop 비서` / `kadan stop 대시보드` end them. Options: `kadan up --cmd 'claude' --port 8800 --no-prompt`.
+
+## Manual run
 
 ```bash
 export KADAN_FLOOR=tmux       # fixed per machine: tmux | rottie

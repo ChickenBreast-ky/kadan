@@ -11,6 +11,7 @@ import { CardStore } from "./card-store.mjs";
 import { cardCommand } from "./card-command.mjs";
 import { registerStartedRole } from "./hierarchy-register.mjs";
 import {workCommand} from './work-command.mjs';
+import { runInit, runUp } from './quickstart.mjs';
 import {WorkStore} from './work-store.mjs';
 import {resolveWorkMail} from './work-mail.mjs';
 import { buildCardCenter } from "./card-center.mjs";
@@ -1675,6 +1676,39 @@ function cmdWall(_argv, flags) {
   });
 }
 
+function cmdInit(_argv, flags) {
+  if (flags.help) {
+    console.log("사용법: kadan init [--runner codex|claude] [--no-skills]  (환경 확인 · 스킬 링크 · 실행기 선택, 처음 한 번)");
+    return;
+  }
+  runInit({
+    home: ledgerHome(),
+    repoRoot: new URL("..", import.meta.url).pathname,
+    flags,
+    floorName: floor.name,
+  });
+}
+
+function cmdUp(_argv, flags) {
+  if (flags.help) {
+    console.log("사용법: kadan up [--cmd <실행기 명령>] [--port 8790] [--hidden] [--no-prompt]  (비서 세션 + 대시보드 세션)");
+    return;
+  }
+  if (floor.name === "tmux") requireWindowChoice();
+  runUp({
+    home: ledgerHome(),
+    flags,
+    floor,
+    sessionName,
+    cliPath: new URL(import.meta.url).pathname,
+    start: (argv, startFlags) => cmdStart(argv, startFlags),
+    send: ({ role, session, message }) => {
+      guardedSend({ floor, session, role, message, recordedPid: recordedPid(lastStartFor(session)) });
+      console.log(`첫 지문 전송됨: ${session} (${Buffer.byteLength(message)}B) — 입력 접수·AI 실행 미확인`);
+    },
+  });
+}
+
 function cmdRead(argv, flags) {
   const role = argv[0];
   if (!role) die("사용법: kadan read <역할> [--lines N]");
@@ -1850,6 +1884,8 @@ const COMMANDS = {
   card: (argv,flags) => console.log(JSON.stringify(cardCommand(argv,flags,{home:ledgerHome(),by:resolveLedgerBy({env:process.env})}),null,2)),
   handover: cmdHandover,
   plan: cmdPlan,
+  init: cmdInit,
+  up: cmdUp,
   start: cmdStart,
   send: cmdSend,
   done: cmdDone,
@@ -1870,13 +1906,13 @@ export function main(argv) {
   const fn = COMMANDS[command];
   if (!fn) {
     console.error(
-      "사용법: kadan <plan|start|send|done|wait|watch|watch-report|stop|status|tree|wall|dashboard|read|log|attach|handover|work|card|decision|storage|inbox> [대상] [옵션]"
+      "사용법: kadan <init|up|plan|start|send|done|wait|watch|watch-report|stop|status|tree|wall|dashboard|read|log|attach|handover|work|card|decision|storage|inbox> [대상] [옵션]"
     );
     process.exit(command && command !== "--help" ? 1 : 0);
   }
   const { flags, rest: args } = parseFlags(rest);
   try {
-    if(['start','send','stop','done','plan','watch-report'].includes(command)||command==='handover'&&!['show','list'].includes(args[0])||command==='card'&&!['list','show'].includes(args[0])||command==='decision'&&!['list','show'].includes(args[0]))assertWritable(ledgerHome());
+    if(['init','up','start','send','stop','done','plan','watch-report'].includes(command)||command==='handover'&&!['show','list'].includes(args[0])||command==='card'&&!['list','show'].includes(args[0])||command==='decision'&&!['list','show'].includes(args[0]))assertWritable(ledgerHome());
     const result=fn(args, flags);
     if(result?.catch)return result.catch(error=>{
       console.error(`오류: ${error.message}`);
