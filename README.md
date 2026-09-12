@@ -46,7 +46,8 @@ Data lives in `~/.kadan` (override with `KADAN_HOME`). The ledger is append-only
 - `kadan watch` — background monitor that reports stalls, disconnects and DONE candidates to a supervisor role.
 - `kadan wall` / `kadan dashboard` — local HTML views of boards, cards, ledger and mail.
 - `kadan card` / `kadan work` — central card store and result-oriented work items.
-- `docs/` — design rules, watch criteria, hierarchy, handover, SQLite storage.
+- `docs/` — design principles and locked rules (`design.md`), watch criteria, hierarchy, handover, SQLite storage.
+- `CONTRIBUTING.md` — how to contribute; the same rules apply if you use an AI coding agent.
 - `skills/` — conductor / supervisor / secretary skills for Codex-style agents that drive Kadan.
 
 ## Test

@@ -9,3 +9,7 @@ node_modules/
 
 # private daily logs / evidence live in a separate repository nested here
 docs/daily/
+
+# maintainer-local agent instructions are not part of the public repo
+AGENTS.md
+CLAUDE.md

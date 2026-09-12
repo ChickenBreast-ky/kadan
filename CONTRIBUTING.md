@@ -9,6 +9,9 @@ Thanks for helping. A few rules keep this project small and safe.
 3. **No provider adapters.** Kadan does not special-case any AI CLI. If something needs a per-CLI branch, open an issue first.
 4. **Fail closed.** Before sending, the session must exist and its pane PID must match. Unknown failures are reported, not retried.
 5. **No completed DONE markers in prompts.** Prompts describe the format (`KADAN:DONE <card-id> <ok|failed>`); the agent assembles it. A literal marker in the prompt is read back as a false completion.
+6. **`docs/daily/` is not part of this repository.** Do not commit files there or point code at that path.
+
+This repository intentionally ships no `AGENTS.md` / `CLAUDE.md`. If you work with an AI coding agent, point it at this file and at `docs/design.md` (why the rules exist, ledger event format, glossary).
 
 ## Workflow
 
@@ -24,4 +27,4 @@ Thanks for helping. A few rules keep this project small and safe.
 - `tests/` — `node --test`. Tests that need tmux skip when it is absent.
 - `scripts/watch-judge.sh` — example judge command for `kadan watch`; requires `KADAN_JUDGE_MODEL`.
 - `skills/` — agent skills that drive Kadan (conductor, supervisor, secretary).
-- `docs/` — current rules; `docs/design.md` explains the locked rules and ledger format. Daily logs and evidence are not part of this repository.
+- `docs/` — current rules; `docs/design.md` explains the locked rules and ledger format.
